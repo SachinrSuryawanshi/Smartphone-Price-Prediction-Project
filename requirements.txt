@@ -9,3 +9,7 @@ seaborn==0.13.2
 matplotlib==3.10.8
 jupyter
 ipykernel
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.5.0
+requests>=2.31.0
