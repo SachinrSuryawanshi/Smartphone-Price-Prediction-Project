@@ -145,6 +145,15 @@ if submitted:
                 "Estimated Range",
                 f"₹{data['price_range']['lower_bound_inr']:,.0f} – ₹{data['price_range']['upper_bound_inr']:,.0f}"
             )
+            
+            similar_devices = data.get("similar_phones", [])
+            if similar_devices:
+                st.markdown("---")
+                st.markdown("#### 📱 Phones Available in This Price Range")
+                sim_cols = st.columns(len(similar_devices))
+                for col, item in zip(sim_cols, similar_devices):
+                    with col:
+                        st.info(f"**{item['phone'].title()}**\n\n{item['price']}")
         else:
             st.error(f"Backend Error [{response.status_code}]: {response.text}")
 

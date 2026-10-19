@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -26,6 +26,10 @@ class PredictionResponseSchema(BaseModel):
   dominant_features: Dict[str, str] = Field(
       ..., description="Key specs driving this prediction"
   )
+  similar_phones: Optional[List[Dict[str, str]]] = Field(
+        default_factory=list,
+        description="Sample phones from the dataset in a similar price range"
+    )
 
 
 class HealthResponseSchema(BaseModel):
