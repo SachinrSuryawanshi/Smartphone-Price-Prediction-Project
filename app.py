@@ -1,5 +1,7 @@
+import requests
 import streamlit as st
-from prediction import predict_price
+
+API_URL = "http://127.0.0.1:8000/predict"
 
 st.set_page_config(
     page_title="Smartphone Price Predictor",
@@ -129,7 +131,24 @@ if submitted:
     }
 
     try:
-        predicted_price = predict_price(smartphone_features)
-        st.success(f"Predicted Smartphone Price: ₹ {predicted_price:,.2f}")
+        with st.spinner("Fetching valuation from FastAPI..."):
+            response = requests.post(API_URL, json=smartphone_features, timeout=10)
+
+        if response.status_code == 200:
+            data = response.json()
+            st.success(f"### Predicted Price: {data['formatted_price']}")
+
+            res_col1, res_col2, res_col3 = st.columns(3)
+            res_col1.metric("Market Segment", data["market_segment"])
+            res_col2.metric("Confidence Score", f"{data['confidence_score'] * 100:.1f}%")
+            res_col3.metric(
+                "Estimated Range",
+                f"₹{data['price_range']['lower_bound_inr']:,.0f} – ₹{data['price_range']['upper_bound_inr']:,.0f}"
+            )
+        else:
+            st.error(f"Backend Error [{response.status_code}]: {response.text}")
+
+    except requests.exceptions.ConnectionError:
+        st.error(f"Could not connect to FastAPI at `{API_URL}`. Make sure Uvicorn is running: `uvicorn main:app --reload`")
     except Exception as e:
         st.error(f"Error in prediction: {e}")
