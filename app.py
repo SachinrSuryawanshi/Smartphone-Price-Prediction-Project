@@ -9,8 +9,8 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("📱 Smartphone Price Predictor")
-st.markdown("This application predicts the price of a smartphone based on its features.")
+st.title("📱 Smartphone Price Predictor & Deal Finder")
+st.markdown("Estimate fair market valuation for any smartphone configuration and analyze if a seller's listing is a great deal or overpriced.")
 
 with st.form(key="price_prediction_form"):
     st.subheader("1. General & Hardware Features")
@@ -97,7 +97,19 @@ with st.form(key="price_prediction_form"):
         nfc = st.checkbox("NFC Support", value=False)
         ir_blaster = st.checkbox("IR Blaster Support", value=False)
 
-    submitted = st.form_submit_button("Predict Smartphone Price", use_container_width=True)
+    # 4. Optional Deal Analysis Input
+    st.markdown("---")
+    st.subheader("4. Deal Evaluation (Optional)")
+    listing_price = st.number_input(
+        "Actual Store / Listing Price (₹) — Enter to analyze whether the deal is fair or overpriced",
+        min_value=0.0,
+        max_value=300000.0,
+        value=0.0,
+        step=500.0,
+        help="Leave at ₹0.00 if you only want the model's price prediction."
+    )
+
+    submitted = st.form_submit_button("Predict Smartphone Price & Analyze Deal", use_container_width=True)
 
 if submitted:
     smartphone_features = {
@@ -138,6 +150,7 @@ if submitted:
             data = response.json()
             st.success(f"### Predicted Price: {data['formatted_price']}")
 
+            # Metric Cards
             res_col1, res_col2, res_col3 = st.columns(3)
             res_col1.metric("Market Segment", data["market_segment"])
             res_col2.metric("Confidence Score", f"{data['confidence_score'] * 100:.1f}%")
@@ -145,7 +158,34 @@ if submitted:
                 "Estimated Range",
                 f"₹{data['price_range']['lower_bound_inr']:,.0f} – ₹{data['price_range']['upper_bound_inr']:,.0f}"
             )
-            
+
+            # Deal Intelligence Analysis (Only if listing price was entered)
+            if listing_price > 0:
+                predicted_val = data["predicted_price_inr"]
+                price_diff = predicted_val - listing_price
+                diff_pct = (price_diff / predicted_val) * 100
+
+                st.markdown("---")
+                st.markdown("#### 🏷️ Deal Intelligence Analysis")
+
+                deal_col1, deal_col2 = st.columns([1, 2])
+                with deal_col1:
+                    if diff_pct > 10.0:
+                        st.success("### 🔥 Great Value Deal!")
+                        st.caption(f"Listed **₹{abs(price_diff):,.0f} ({abs(diff_pct):.1f}%) below** fair market value.")
+                    elif diff_pct < -10.0:
+                        st.error("### ⚠️ Overpriced / Poor Deal")
+                        st.caption(f"Listed **₹{abs(price_diff):,.0f} ({abs(diff_pct):.1f}%) above** fair market value.")
+                    else:
+                        st.info("### ✅ Fair Market Value")
+                        st.caption("Listing price aligns closely with expected hardware valuation.")
+
+                with deal_col2:
+                    st.write(f"- **Fair Hardware Valuation:** ₹{predicted_val:,.2f}")
+                    st.write(f"- **Actual Listing Price:** ₹{listing_price:,.2f}")
+                    st.write(f"- **Net Difference:** {'-₹' if price_diff < 0 else '+₹'}{abs(price_diff):,.2f}")
+
+            # Similar Phones Section
             similar_devices = data.get("similar_phones", [])
             if similar_devices:
                 st.markdown("---")
