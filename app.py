@@ -1,203 +1,264 @@
+import pandas as pd
 import requests
 import streamlit as st
 
 API_URL = "http://127.0.0.1:8000/predict"
+DATA_PATH = "data/processed/cleaned_smartphones.csv"
 
 st.set_page_config(
-    page_title="Smartphone Price Predictor",
+    page_title="Smartphone Intelligence Platform",
     page_icon="📱",
     layout="wide"
 )
 
-st.title("📱 Smartphone Price Predictor & Deal Finder")
-st.markdown("Estimate fair market valuation for any smartphone configuration and analyze if a seller's listing is a great deal or overpriced.")
+st.title("📱 Smartphone Price Predictor & Market Analytics")
 
-with st.form(key="price_prediction_form"):
-    st.subheader("1. General & Hardware Features")
-    col1, col2, col3, col4 = st.columns(4)
+# --- CREATE TABS LIKE IN YOUR REFERENCE IMAGE ---
+tab1, tab2 = st.tabs(["📱 Price & Deal Prediction", "📊 Smartphone Insights"])
 
-    with col1:
-        brand = st.selectbox(
-            "Brand",
-            ["samsung", "apple", "xiaomi", "oneplus", "realme", "vivo", "oppo", "motorola", "iqoo", "poco", "google", "other"]
-        )
-        os = st.selectbox(
-            "Operating System",
-            ["android", "ios", "other"]
-        )
+# ==========================================
+# TAB 1: PREDICTION & DEAL FINDER
+# ==========================================
+with tab1:
+    st.markdown("Estimate fair market valuation for any smartphone and evaluate live deals.")
+    
+    with st.form(key="price_prediction_form"):
+        st.subheader("1. General & Hardware Features")
+        col1, col2, col3, col4 = st.columns(4)
 
-    with col2:
-        processor_name = st.selectbox(
-            "Processor Name",
-            ["snapdragon", "dimensity", "bionic", "helio", "exynos", "unisoc", "other"]
-        )
-        notches = st.selectbox(
-            "Display Notch",
-            ["punch hole", "water drop", "notch", "bezel-less", "other"]
-        )
+        with col1:
+            brand = st.selectbox(
+                "Brand",
+                ["samsung", "apple", "xiaomi", "oneplus", "realme", "vivo", "oppo", "motorola", "iqoo", "poco", "google", "other"]
+            )
+            os = st.selectbox("Operating System", ["android", "ios", "other"])
 
-    with col3:
-        rating = st.slider("Rating", min_value=50.0, max_value=100.0, value=82.0, step=0.5)
-        core = st.selectbox(
-            "Processor Core",  
-            [4.0, 6.0, 8.0, 10.0], index=2
-        )
-
-    with col4:
-        speed = st.number_input("Processor Speed (GHz)", min_value=1.0, max_value=4.0, value=2.4, step=0.1)
-        sim = st.selectbox("SIM Type", [1.0, 2.0], format_func=lambda x: "Single SIM" if x == 1.0 else "Dual SIM")
-
-    st.markdown("---")
-    st.subheader("2. Memory & Display Features")
-    col5, col6, col7, col8 = st.columns(4)
-
-    with col5:
-        ram = st.select_slider(
-            "RAM (GB)", options=[2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 16.0], value=8.0
-        )
-        rom = st.select_slider(
-            "ROM (GB)", options=[32.0, 64.0, 128.0, 256.0, 512.0, 1024.0], value=128.0
-        )
-
-    with col6:
-        inches = st.number_input("Display Size (inches)", min_value=4.0, max_value=8.0, value=6.67, step=0.01)
-        hz = st.select_slider(
-            "Refresh Rate (Hz)", options=[60.0, 90.0, 120.0, 144.0, 165.0], value=120.0
-        )
-
-    with col7:
-        xaxis = st.number_input("Horizontal Resolution (px)", min_value=480.0, max_value=3000.0, value=1080.0, step=10.0)
-        yaxis = st.number_input("Vertical Resolution (px)", min_value=800.0, max_value=4000.0, value=2400.0, step=10.0)
-
-    with col8:
-        has_memory_card = st.checkbox("Supports Memory Card", value=False)
-        is_hybrid = st.checkbox("Hybrid SIM Slot", value=False)
-        extra_support = st.number_input("Extra Memory Support (GB)", min_value=0.0, max_value=2048.0, value=0.0, step=128.0)
-
-    st.markdown("---")
-    st.subheader("3. Battery & Camera Features")
-    col9, col10, col11, col12 = st.columns(4)
-
-    with col9:
-        capacity = st.number_input("Battery Capacity (mAh)", min_value=1500.0, max_value=8000.0, value=5000.0, step=100.0)
-        watt = st.number_input("Charging Wattage (W)", min_value=5.0, max_value=240.0, value=45.0, step=1.0)
-        fast_charging = st.checkbox("Supports Fast Charging", value=True)
-
-    with col10:
-        rear_camera = st.selectbox("Has Rear Camera", [1.0, 0.0], format_func=lambda x: "Yes" if x == 1.0 else "No")
-        rear_camera_count = st.slider("Rear Camera Count", min_value=1.0, max_value=4.0, value=3.0, step=1.0)
-
-    with col11:
-        rear_mp = st.number_input("Rear Camera Megapixels (MP)", min_value=5.0, max_value=200.0, value=50.0, step=1.0)
-        front_mp = st.number_input("Front Camera Megapixels (MP)", min_value=2.0, max_value=60.0, value=16.0, step=1.0)
-
-    with col12:
-        st.write("**Connectivity Features**")
-        five_g = st.checkbox("5G Support", value=True)
-        nfc = st.checkbox("NFC Support", value=False)
-        ir_blaster = st.checkbox("IR Blaster Support", value=False)
-
-    # 4. Optional Deal Analysis Input
-    st.markdown("---")
-    st.subheader("4. Deal Evaluation (Optional)")
-    listing_price = st.number_input(
-        "Actual Store / Listing Price (₹) — Enter to analyze whether the deal is fair or overpriced",
-        min_value=0.0,
-        max_value=300000.0,
-        value=0.0,
-        step=500.0,
-        help="Leave at ₹0.00 if you only want the model's price prediction."
-    )
-
-    submitted = st.form_submit_button("Predict Smartphone Price & Analyze Deal", use_container_width=True)
-
-if submitted:
-    smartphone_features = {
-        "Brand": brand,
-        "OS": os,
-        "Notches": notches,
-        "ProcessorName": processor_name,
-        "rating": float(rating),
-        "Speed": float(speed),
-        "Core": float(core),
-        "Ram": float(ram),
-        "Rom": float(rom),
-        "Inches": float(inches),
-        "Xaxis": float(xaxis),
-        "Yaxis": float(yaxis),
-        "Hz": float(hz),
-        "Capacity": float(capacity),
-        "Watt": float(watt),
-        "RearCamera": float(rear_camera),
-        "RearMP": float(rear_mp),
-        "FrontMP": float(front_mp),
-        "RearCameraCount": float(rear_camera_count),
-        "Sim": float(sim),
-        "5G": int(five_g),
-        "NFC": int(nfc),
-        "IrBlaster": int(ir_blaster),
-        "FastCharging": int(fast_charging),
-        "HasMemoryCard": int(has_memory_card),
-        "IsHybrid": int(is_hybrid),
-        "ExtraSupport": float(extra_support)
-    }
-
-    try:
-        with st.spinner("Fetching valuation from FastAPI..."):
-            response = requests.post(API_URL, json=smartphone_features, timeout=10)
-
-        if response.status_code == 200:
-            data = response.json()
-            st.success(f"### Predicted Price: {data['formatted_price']}")
-
-            # Metric Cards
-            res_col1, res_col2, res_col3 = st.columns(3)
-            res_col1.metric("Market Segment", data["market_segment"])
-            res_col2.metric("Confidence Score", f"{data['confidence_score'] * 100:.1f}%")
-            res_col3.metric(
-                "Estimated Range",
-                f"₹{data['price_range']['lower_bound_inr']:,.0f} – ₹{data['price_range']['upper_bound_inr']:,.0f}"
+        with col2:
+            processor_name = st.selectbox(
+                "Processor Name",
+                ["snapdragon", "dimensity", "bionic", "helio", "exynos", "unisoc", "other"]
+            )
+            notches = st.selectbox(
+                "Display Notch",
+                ["punch hole", "water drop", "notch", "bezel-less", "other"]
             )
 
-            # Deal Intelligence Analysis (Only if listing price was entered)
-            if listing_price > 0:
-                predicted_val = data["predicted_price_inr"]
-                price_diff = predicted_val - listing_price
-                diff_pct = (price_diff / predicted_val) * 100
+        with col3:
+            rating = st.slider("Rating", min_value=50.0, max_value=100.0, value=82.0, step=0.5)
+            core = st.selectbox("Processor Core", [4.0, 6.0, 8.0, 10.0], index=2)
 
-                st.markdown("---")
-                st.markdown("#### 🏷️ Deal Intelligence Analysis")
+        with col4:
+            speed = st.number_input("Processor Speed (GHz)", min_value=1.0, max_value=4.0, value=2.4, step=0.1)
+            sim = st.selectbox("SIM Type", [1.0, 2.0], format_func=lambda x: "Single SIM" if x == 1.0 else "Dual SIM")
 
-                deal_col1, deal_col2 = st.columns([1, 2])
-                with deal_col1:
-                    if diff_pct > 10.0:
-                        st.success("### 🔥 Great Value Deal!")
-                        st.caption(f"Listed **₹{abs(price_diff):,.0f} ({abs(diff_pct):.1f}%) below** fair market value.")
-                    elif diff_pct < -10.0:
-                        st.error("### ⚠️ Overpriced / Poor Deal")
-                        st.caption(f"Listed **₹{abs(price_diff):,.0f} ({abs(diff_pct):.1f}%) above** fair market value.")
-                    else:
-                        st.info("### ✅ Fair Market Value")
-                        st.caption("Listing price aligns closely with expected hardware valuation.")
+        st.markdown("---")
+        st.subheader("2. Memory & Display Features")
+        col5, col6, col7, col8 = st.columns(4)
 
-                with deal_col2:
-                    st.write(f"- **Fair Hardware Valuation:** ₹{predicted_val:,.2f}")
-                    st.write(f"- **Actual Listing Price:** ₹{listing_price:,.2f}")
-                    st.write(f"- **Net Difference:** {'-₹' if price_diff < 0 else '+₹'}{abs(price_diff):,.2f}")
+        with col5:
+            ram = st.select_slider("RAM (GB)", options=[2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 16.0], value=8.0)
+            rom = st.select_slider("ROM (GB)", options=[32.0, 64.0, 128.0, 256.0, 512.0, 1024.0], value=128.0)
 
-            # Similar Phones Section
-            similar_devices = data.get("similar_phones", [])
-            if similar_devices:
-                st.markdown("---")
-                st.markdown("#### 📱 Phones Available in This Price Range")
-                sim_cols = st.columns(len(similar_devices))
-                for col, item in zip(sim_cols, similar_devices):
-                    with col:
-                        st.info(f"**{item['phone'].title()}**\n\n{item['price']}")
-        else:
-            st.error(f"Backend Error [{response.status_code}]: {response.text}")
+        with col6:
+            inches = st.number_input("Display Size (inches)", min_value=4.0, max_value=8.0, value=6.67, step=0.01)
+            hz = st.select_slider("Refresh Rate (Hz)", options=[60.0, 90.0, 120.0, 144.0, 165.0], value=120.0)
 
-    except requests.exceptions.ConnectionError:
-        st.error(f"Could not connect to FastAPI at `{API_URL}`. Make sure Uvicorn is running: `uvicorn main:app --reload`")
+        with col7:
+            xaxis = st.number_input("Horizontal Resolution (px)", min_value=480.0, max_value=3000.0, value=1080.0, step=10.0)
+            yaxis = st.number_input("Vertical Resolution (px)", min_value=800.0, max_value=4000.0, value=2400.0, step=10.0)
+
+        with col8:
+            has_memory_card = st.checkbox("Supports Memory Card", value=False)
+            is_hybrid = st.checkbox("Hybrid SIM Slot", value=False)
+            extra_support = st.number_input("Extra Memory Support (GB)", min_value=0.0, max_value=2048.0, value=0.0, step=128.0)
+
+        st.markdown("---")
+        st.subheader("3. Battery & Camera Features")
+        col9, col10, col11, col12 = st.columns(4)
+
+        with col9:
+            capacity = st.number_input("Battery Capacity (mAh)", min_value=1500.0, max_value=8000.0, value=5000.0, step=100.0)
+            watt = st.number_input("Charging Wattage (W)", min_value=5.0, max_value=240.0, value=45.0, step=1.0)
+            fast_charging = st.checkbox("Supports Fast Charging", value=True)
+
+        with col10:
+            rear_camera = st.selectbox("Has Rear Camera", [1.0, 0.0], format_func=lambda x: "Yes" if x == 1.0 else "No")
+            rear_camera_count = st.slider("Rear Camera Count", min_value=1.0, max_value=4.0, value=3.0, step=1.0)
+
+        with col11:
+            rear_mp = st.number_input("Rear Camera Megapixels (MP)", min_value=5.0, max_value=200.0, value=50.0, step=1.0)
+            front_mp = st.number_input("Front Camera Megapixels (MP)", min_value=2.0, max_value=60.0, value=16.0, step=1.0)
+
+        with col12:
+            st.write("**Connectivity Features**")
+            five_g = st.checkbox("5G Support", value=True)
+            nfc = st.checkbox("NFC Support", value=False)
+            ir_blaster = st.checkbox("IR Blaster Support", value=False)
+
+        st.markdown("---")
+        st.subheader("4. Deal Evaluation (Optional)")
+        listing_price = st.number_input(
+            "Actual Store / Listing Price (₹) — Enter to analyze whether the deal is fair or overpriced",
+            min_value=0.0,
+            max_value=300000.0,
+            value=0.0,
+            step=500.0,
+        )
+
+        submitted = st.form_submit_button("Predict Smartphone Price & Analyze Deal", use_container_width=True)
+
+    if submitted:
+        smartphone_features = {
+            "Brand": brand,
+            "OS": os,
+            "Notches": notches,
+            "ProcessorName": processor_name,
+            "rating": float(rating),
+            "Speed": float(speed),
+            "Core": float(core),
+            "Ram": float(ram),
+            "Rom": float(rom),
+            "Inches": float(inches),
+            "Xaxis": float(xaxis),
+            "Yaxis": float(yaxis),
+            "Hz": float(hz),
+            "Capacity": float(capacity),
+            "Watt": float(watt),
+            "RearCamera": float(rear_camera),
+            "RearMP": float(rear_mp),
+            "FrontMP": float(front_mp),
+            "RearCameraCount": float(rear_camera_count),
+            "Sim": float(sim),
+            "5G": int(five_g),
+            "NFC": int(nfc),
+            "IrBlaster": int(ir_blaster),
+            "FastCharging": int(fast_charging),
+            "HasMemoryCard": int(has_memory_card),
+            "IsHybrid": int(is_hybrid),
+            "ExtraSupport": float(extra_support)
+        }
+
+        try:
+            with st.spinner("Fetching valuation from FastAPI..."):
+                response = requests.post(API_URL, json=smartphone_features, timeout=10)
+
+            if response.status_code == 200:
+                data = response.json()
+                st.success(f"### Predicted Price: {data['formatted_price']}")
+
+                res_col1, res_col2, res_col3 = st.columns(3)
+                res_col1.metric("Market Segment", data["market_segment"])
+                res_col2.metric("Confidence Score", f"{data['confidence_score'] * 100:.1f}%")
+                res_col3.metric(
+                    "Estimated Range",
+                    f"₹{data['price_range']['lower_bound_inr']:,.0f} – ₹{data['price_range']['upper_bound_inr']:,.0f}"
+                )
+
+                if listing_price > 0:
+                    predicted_val = data["predicted_price_inr"]
+                    price_diff = predicted_val - listing_price
+                    diff_pct = (price_diff / predicted_val) * 100
+
+                    st.markdown("---")
+                    st.markdown("#### 🏷️ Deal Intelligence Analysis")
+                    d_col1, d_col2 = st.columns([1, 2])
+                    with d_col1:
+                        if diff_pct > 10.0:
+                            st.success("### 🔥 Great Value Deal!")
+                            st.caption(f"Listed **₹{abs(price_diff):,.0f} ({abs(diff_pct):.1f}%) below** fair market value.")
+                        elif diff_pct < -10.0:
+                            st.error("### ⚠️ Overpriced / Poor Deal")
+                            st.caption(f"Listed **₹{abs(price_diff):,.0f} ({abs(diff_pct):.1f}%) above** fair market value.")
+                        else:
+                            st.info("### ✅ Fair Market Value")
+                            st.caption("Listing price aligns closely with expected hardware valuation.")
+
+                    with d_col2:
+                        st.write(f"- **Fair Hardware Valuation:** ₹{predicted_val:,.2f}")
+                        st.write(f"- **Actual Listing Price:** ₹{listing_price:,.2f}")
+                        st.write(f"- **Net Difference:** {'-₹' if price_diff < 0 else '+₹'}{abs(price_diff):,.2f}")
+
+                similar_devices = data.get("similar_phones", [])
+                if similar_devices:
+                    st.markdown("---")
+                    st.markdown("#### 📱 Phones Available in This Price Range")
+                    sim_cols = st.columns(len(similar_devices))
+                    for col, item in zip(sim_cols, similar_devices):
+                        with col:
+                            st.info(f"**{item['phone'].title()}**\n\n{item['price']}")
+
+            else:
+                st.error(f"Backend Error [{response.status_code}]: {response.text}")
+
+        except requests.exceptions.ConnectionError:
+            st.error(f"Could not connect to FastAPI at `{API_URL}`. Make sure Uvicorn is running.")
+        except Exception as e:
+            st.error(f"Error in prediction: {e}")
+
+
+# ==========================================
+# TAB 2: SMARTPHONE MARKET INSIGHTS
+# ==========================================
+# ==========================================
+# TAB 2: SMARTPHONE MARKET INSIGHTS
+# ==========================================
+with tab2:
+    st.markdown("### 📊 Market Trends & Smartphone Pricing Distribution")
+
+    try:
+        df_insights = pd.read_csv(DATA_PATH)
+
+        # Extract Brand dynamically from the first word of the Model column
+        if "Brand" not in df_insights.columns and "Model" in df_insights.columns:
+            df_insights["Brand"] = (
+                df_insights["Model"].astype(str).str.split().str[0].str.title()
+            )
+
+        price_col = "Price"
+        brand_col = "Brand"
+        ram_col = "Ram"
+
+        # Metric summary row
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Total Phones Indexed", f"{len(df_insights):,}")
+        m2.metric("Median Market Price", f"₹{df_insights[price_col].median():,.0f}")
+        m3.metric("Highest Recorded Price", f"₹{df_insights[price_col].max():,.0f}")
+        m4.metric("Lowest Recorded Price", f"₹{df_insights[price_col].min():,.0f}")
+
+        st.markdown("---")
+        chart_col1, chart_col2 = st.columns(2)
+
+        with chart_col1:
+            st.subheader("Average Price by Brand (Top 10)")
+            top_brands = df_insights[brand_col].value_counts().head(10).index
+            brand_avg_price = (
+                df_insights[df_insights[brand_col].isin(top_brands)]
+                .groupby(brand_col)[price_col]
+                .mean()
+                .sort_values(ascending=False)
+            )
+            st.bar_chart(brand_avg_price)
+
+        with chart_col2:
+            st.subheader("Price vs. RAM (GB)")
+            if ram_col in df_insights.columns:
+                ram_price = df_insights.groupby(ram_col)[price_col].median()
+                st.line_chart(ram_price)
+
+        st.markdown("---")
+        st.subheader("🔍 Explore Market Catalog")
+        default_selection = list(top_brands[:3]) if len(top_brands) >= 3 else list(top_brands)
+        filter_brand = st.multiselect(
+            "Filter by Brand",
+            options=sorted(df_insights[brand_col].unique()),
+            default=default_selection
+        )
+        if filter_brand:
+            display_cols = ["Model", "Price", "Ram", "Rom", "ProcessorName", "Capacity", "rating"]
+            # Keep only columns that exist in the dataframe
+            valid_cols = [c for c in display_cols if c in df_insights.columns or c.lower() in df_insights.columns]
+            filtered_df = df_insights[df_insights[brand_col].isin(filter_brand)]
+            st.dataframe(filtered_df[valid_cols] if valid_cols else filtered_df, use_container_width=True, hide_index=True)
+
     except Exception as e:
-        st.error(f"Error in prediction: {e}")
+        st.warning(f"Could not load market insights dataset: {e}")
