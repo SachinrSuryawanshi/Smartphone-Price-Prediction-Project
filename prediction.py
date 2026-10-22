@@ -87,6 +87,9 @@ def run_prediction(input_data: SmartphoneInputSchema) -> PredictionResponseSchem
 
         similar_phones_list = get_similar_phones(lower_bound, upper_bound)
 
+        brand_name = str(data_dict.get("Brand", ""))
+        brand_catalog_list = get_brand_phones(brand_name, limit=5)
+
         return PredictionResponseSchema(
             predicted_price_inr=predicted_price,
             formatted_price=f"₹{predicted_price:,.2f}",
@@ -104,6 +107,49 @@ def run_prediction(input_data: SmartphoneInputSchema) -> PredictionResponseSchem
                 ),
             },
             similar_phones=similar_phones_list,
+            brand_catalog=brand_catalog_list,
         )
     except Exception as e:
         raise RuntimeError(f"Error during smartphone price prediction: {e}")
+
+def get_brand_phones(brand: str, limit: int = 5) -> list:
+    """Fetches popular phones of the selected brand along with key specifications."""
+    if df_smartphones is None or df_smartphones.empty:
+        return []
+
+    brand_col = None
+    for col in ["Brand", "brand"]:
+        if col in df_smartphones.columns:
+            brand_col = col
+            break
+    price_col = None
+    for col in ["Price", "price"]:
+        if col in df_smartphones.columns:
+            price_col = col
+            break
+
+    if not brand_col or not price_col:
+        return []
+
+    brand_df = df_smartphones[
+        df_smartphones[brand_col].astype(str).str.lower() == str(brand).lower()
+    ]
+
+    if brand_df.empty:
+        return []
+
+    sample_df = brand_df.sort_values(by=price_col, ascending=True).head(limit)
+
+    results = []
+    for _, row in sample_df.iterrows():
+        phone_name = str(row.get("Model", row.get(brand_col, "Phone"))).title()
+        results.append({
+            "model": phone_name,
+            "price": f"₹{row[price_col]:,.0f}",
+            "processor": str(row.get("ProcessorName", row.get("processor_name", "N/A"))).title(),
+            "ram_rom": f"{int(row.get('Ram', row.get('ram', 0)))}GB / {int(row.get('Rom', row.get('rom', 0)))}GB",
+            "battery": f"{int(row.get('Capacity', row.get('capacity', 0)))} mAh",
+            "camera": f"{int(row.get('RearMP', row.get('rear_mp', 0)))} MP",
+        })
+
+    return results
