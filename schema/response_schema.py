@@ -31,6 +31,9 @@ class PredictionResponseSchema(BaseModel):
         description="Sample phones from the dataset in a similar price range"
     )
 
+  brand_catalog: Optional[List[Dict[str, str]]] = Field(
+        default_factory=list,
+        description="Phones from the same brand with specs and prices",)
 
 class HealthResponseSchema(BaseModel):
   status: str
